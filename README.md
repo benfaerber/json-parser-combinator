@@ -193,7 +193,7 @@ const capitalSentenceParser = firstSuccessfulParser(
 
 const sentence = 'THIS RECIPE REQUIRES 3 STICKS OF BUTTER';
 
-capitalSentenceParser(sentence);
+parseRecursively(sentence, capitalSentenceParser);
 // Outputs: { parsed: [
     'T', 'H', 'I', 'S', ' ',
     'R', 'E', 'C', 'I', 'P',
