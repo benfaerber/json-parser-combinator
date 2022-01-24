@@ -1,6 +1,6 @@
 # JSON Parser Combinator
  A JSON parser written in Typescript using the Parser Combinator methodology.
- I recommend that anyone who is interested in functional parsers should use this as reference.
+ I recommend that anyone who is interested in functional parsers should use this as a reference.
  A Rust implementation is coming soon.
 
 ## Docs
