@@ -59,6 +59,29 @@ const numericLiteralToNumber = (numericLiteral: string): number => {
   return integer + decimal;
 };
 
+// Value must begin with the start character
+const findPairEnd = (
+  value: string,
+  startCharacter: string,
+  endCharacter: string
+): number => {
+  const letters = value.split('');
+
+  const tracker = { opens: 0, closes: 0, index: 0, found: false };
+  for (const letter of letters) {
+    tracker.index += 1;
+    if (letter === startCharacter) tracker.opens += 1;
+    if (letter === endCharacter) tracker.closes += 1;
+    if (tracker.opens === tracker.closes) {
+      break;
+    }
+  }
+
+  return tracker.index;
+};
+
+const showTypeParse = false;
+
 const toIntTester = () => {
   console.log(numericLiteralToNumber('2106.23415302'));
 };
@@ -66,12 +89,11 @@ const toIntTester = () => {
 const invalidIndexKey = -1;
 
 const removeInsignificantWhitespace = (value: string) => {
-  return value.replace(/\n|  /g, '');
+  return value.trim().replace(/\n|  /g, '');
 };
 
 export const jsonTypes = {
   parseBool(value: string): Parsed<JsonBool> {
-    //console.log(value);
     const boolLiteralParser = eitherStringParser(JSON_TRUE, JSON_FALSE);
     const result = boolLiteralParser(value);
 
@@ -149,16 +171,11 @@ export const jsonTypes = {
     if (!hasOpen) return parseFailed(value);
     const letters = value.split('');
 
-    const listEnd = letters.reduce(
-      (acc, letter, index) => (letter === JSON_LIST_END ? index : acc),
-      invalidIndexKey
-    );
-
-    const listLiteral = value.slice(1, listEnd);
+    const listEnd = findPairEnd(value, JSON_LIST_START, JSON_LIST_END);
+    const listLiteral = value.slice(1, listEnd - 1);
 
     const listVals = [];
     let currentLiteral = listLiteral;
-
     while (listLiteral !== '') {
       const { parsed, unparsed } = jsonTypes.parseValue(currentLiteral);
       listVals.push(parsed);
@@ -169,7 +186,7 @@ export const jsonTypes = {
 
     return {
       parsed: listVals as JsonList,
-      unparsed: value.slice(listEnd + 1),
+      unparsed: value.slice(listEnd),
     };
   },
 
@@ -208,29 +225,30 @@ export const jsonTypes = {
     if (!hasOpen) return parseFailed(value);
     const letters = value.split('');
 
-    const objectEnd = letters.reduce(
-      (acc, letter, index) => (letter === JSON_OBJECT_END ? index : acc),
-      invalidIndexKey
-    );
+    const objectEnd = findPairEnd(value, JSON_OBJECT_START, JSON_OBJECT_END);
 
-    const objectLiteral = value.slice(1, objectEnd);
+    const listLiteral = value.slice(1, objectEnd - 1);
 
-    if (objectLiteral === '')
-      return {
-        parsed: {},
-        unparsed: value.slice(objectEnd + 1),
-      };
+    // ? How could this logic be rewritten functionally?
+    // I was thinking a reduction but how would it know how many iterations were needed?
+    const builtObject = {};
+    let currentLiteral = listLiteral;
 
-    const parseKvPairs = delimitedParser(
-      JSON_OBJECT_DELIMITER,
-      jsonTypes.parseKeyValuePair
-    );
+    while (currentLiteral !== '') {
+      const {
+        parsed: [key, value],
+        unparsed,
+      } = jsonTypes.parseKeyValuePair(currentLiteral.trim());
 
-    const kvPairs = parseKvPairs(objectLiteral).parsed;
+      builtObject[key] = value;
+
+      if (!unparsed.startsWith(JSON_OBJECT_DELIMITER)) break;
+      currentLiteral = unparsed.slice(1).trim();
+    }
 
     return {
-      parsed: Object.fromEntries(kvPairs),
-      unparsed: value.slice(objectEnd + 1),
+      parsed: builtObject as JsonObject,
+      unparsed: value.slice(objectEnd),
     };
   },
 };

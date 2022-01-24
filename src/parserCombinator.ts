@@ -5,12 +5,15 @@ export type Parser<O> = (value: string) => Parsed<O>;
 // (description)Parser - returns a custom build parser function
 // parse(description) - applies a given parser in a specific way
 // or more simply: Parser returns a function, parse returns a Parsed<> Object
-export const parseFailed = (value: string) => ({
+export const parseFailed = (value: string): Parsed<any> => ({
   parsed: null,
   unparsed: value,
 });
 
-export const modifyParsed = (result, modifer) => {
+export const modifyParsed = (
+  result: Parsed<any>,
+  modifer: Function
+): Parsed<any> => {
   const parsed =
     result.parsed !== null && result.parsed !== undefined
       ? modifer(result.parsed)
@@ -63,7 +66,7 @@ export const parseRecursively = (
 
   return {
     parsed: data,
-    unparsed: '',
+    unparsed: result.unparsed,
   };
 };
 
@@ -107,3 +110,25 @@ const testRecursiveParse = () => {
     )
   );
 };
+
+const startsWithParser = (
+  start: string,
+  parser: Parser<string>
+): Parser<string> => {
+  const startParser = matchStringParser(start);
+
+  return (value: string) => {
+    const { parsed: startParsed, unparsed: afterStart } = startParser(value);
+    if (!startParsed) return parseFailed(value);
+    const after = parser(afterStart);
+    if (!after.parsed) return parseFailed(value);
+    return {
+      parsed: startParsed + after.parsed,
+      unparsed: after.unparsed,
+    };
+  };
+};
+
+const fruitParser = eitherStringParser('apple', 'pear', 'plum', 'orange');
+const dunderParser = startsWithParser('__', fruitParser);
+console.log(dunderParser('__apple = 100 '));
